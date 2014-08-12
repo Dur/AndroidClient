@@ -1,0 +1,4 @@
+AndroidClient
+=============
+
+Magisterka - klient androidowy
