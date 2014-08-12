@@ -1,5 +1,8 @@
 package com.dur.android;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -9,11 +12,15 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.CheckBox;
@@ -21,6 +28,7 @@ import android.widget.EditText;
 
 public class MainActivity extends Activity {
 	public final static String EXTRA_MESSAGE = "com.example.myfirstapp.MESSAGE";
+	WebSocketClient mWebSocketClient = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -67,10 +75,12 @@ public class MainActivity extends Activity {
 
 			HttpClient httpClient = new DefaultHttpClient();
 			HttpContext localContext = new BasicHttpContext();
-			HttpGet httpGet = new HttpGet("http://192.168.1.22:8080/ServerSide/rest/hello.json");
+			HttpGet httpGet = new HttpGet("http://192.168.1.11:8080/ServerSide/rest/hello.json");
 			httpGet.setHeader(new BasicHeader("Accept", "application/json"));
 			String text = null;
 			try {
+				
+				connectWebSocket();
 
 				HttpResponse response = httpClient.execute(httpGet, localContext);
 
@@ -89,5 +99,46 @@ public class MainActivity extends Activity {
 
 		}
 	} // end CallAPI
+	
+	private void connectWebSocket() {
+		URI uri;
+		try {
+			uri = new URI("ws://websockethost:8080");
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+			return;
+		}
+		mWebSocketClient = new WebSocketClient(uri) {
+			
+			@Override
+			public void onOpen(ServerHandshake serverHandshake) {
+				Log.i("Websocket", "Opened");
+				mWebSocketClient.send("Hello from " + Build.MANUFACTURER + " " + Build.MODEL);
+			}
+
+			@Override
+			public void onMessage(String s) {
+				final String message = s;
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+//						TextView textView = (TextView) findViewById(R.id.messages);
+//						textView.setText(textView.getText() + "\n" + message);
+					}
+				});
+			}
+
+			@Override
+			public void onClose(int i, String s, boolean b) {
+				Log.e("closed", "closed");
+			}
+
+			@Override
+			public void onError(Exception e) {
+				Log.e("Unable to connect", "Unable to connect");
+			}
+		};
+		mWebSocketClient.connect();
+	}
 
 }
