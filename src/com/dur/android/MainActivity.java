@@ -12,13 +12,12 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
+import org.java_websocket.drafts.Draft_17;
+import org.java_websocket.drafts.Draft_75;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -26,9 +25,14 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
 
+import com.dur.android.WebSocket;
+
 public class MainActivity extends Activity {
+	
+	private String HOST_URL = "192.168.1.10:8080/ServerSide";
+	private String WS = "ws://";
+	private String HTTP = "http://";
 	public final static String EXTRA_MESSAGE = "com.example.myfirstapp.MESSAGE";
-	WebSocketClient mWebSocketClient = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -75,22 +79,19 @@ public class MainActivity extends Activity {
 
 			HttpClient httpClient = new DefaultHttpClient();
 			HttpContext localContext = new BasicHttpContext();
-			HttpGet httpGet = new HttpGet("http://192.168.1.11:8080/ServerSide/rest/hello.json");
+			HttpGet httpGet = new HttpGet(HTTP + HOST_URL + "/http/rest/hello.json");
 			httpGet.setHeader(new BasicHeader("Accept", "application/json"));
 			String text = null;
 			try {
-				
 				connectWebSocket();
-
+				Log.i("Connecting to: ", httpGet.getURI().getPath());
 				HttpResponse response = httpClient.execute(httpGet, localContext);
-
 				HttpEntity entity = response.getEntity();
-
 				text = new String(EntityUtils.toString(entity));
+				Log.i("Normal hhtp", text);
 
 			} catch (Exception e) {
-				return e.getLocalizedMessage();
-
+				Log.e("HTTP Connection", e.getMessage());
 			}
 			return text;
 		}
@@ -101,44 +102,21 @@ public class MainActivity extends Activity {
 	} // end CallAPI
 	
 	private void connectWebSocket() {
-		URI uri;
+	    WebSocket client;
 		try {
-			uri = new URI("ws://websockethost:8080");
-		} catch (URISyntaxException e) {
+			Log.i("WebSocket", "Trying to connect to server");
+			client = new WebSocket(new URI(WS + HOST_URL + "/websocket/websocket"), new Draft_17());
+			client.connect();
+			while(! client.getConnection().isOpen()){
+				Thread.sleep(1000);
+			}
+			client.send("jedziemy");
+		} catch (URISyntaxException e1) {
+			Log.i("Websocket", e1.getMessage());
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return;
 		}
-		mWebSocketClient = new WebSocketClient(uri) {
-			
-			@Override
-			public void onOpen(ServerHandshake serverHandshake) {
-				Log.i("Websocket", "Opened");
-				mWebSocketClient.send("Hello from " + Build.MANUFACTURER + " " + Build.MODEL);
-			}
-
-			@Override
-			public void onMessage(String s) {
-				final String message = s;
-				runOnUiThread(new Runnable() {
-					@Override
-					public void run() {
-//						TextView textView = (TextView) findViewById(R.id.messages);
-//						textView.setText(textView.getText() + "\n" + message);
-					}
-				});
-			}
-
-			@Override
-			public void onClose(int i, String s, boolean b) {
-				Log.e("closed", "closed");
-			}
-
-			@Override
-			public void onError(Exception e) {
-				Log.e("Unable to connect", "Unable to connect");
-			}
-		};
-		mWebSocketClient.connect();
 	}
 
 }
