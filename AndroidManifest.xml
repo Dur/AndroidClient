@@ -33,5 +33,4 @@
                 android:value="com.example.helloworld.MainActivity" />
         </activity>
     </application>
-
 </manifest>
